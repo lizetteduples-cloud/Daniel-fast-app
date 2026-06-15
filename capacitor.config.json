@@ -1,0 +1,16 @@
+{
+  "appId": "app.fastingflow.android",
+  "appName": "Daniel Fast",
+  "webDir": "www",
+  "backgroundColor": "#fff5fa",
+  "android": {
+    "backgroundColor": "#fff5fa",
+    "minWebViewVersion": 60,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "iconColor": "#c2185b"
+    }
+  }
+}

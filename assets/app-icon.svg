@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="FastingFlow icon">
+  <defs>
+    <radialGradient id="bg" cx="28%" cy="18%" r="82%">
+      <stop offset="0%" stop-color="#5b123d"/>
+      <stop offset="48%" stop-color="#26091a"/>
+      <stop offset="100%" stop-color="#0d0209"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="160" y1="140" x2="840" y2="900">
+      <stop offset="0%" stop-color="#ff9fd4"/>
+      <stop offset="55%" stop-color="#ff6eb4"/>
+      <stop offset="100%" stop-color="#c2185b"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="26" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="342" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="42"/>
+  <path d="M512 176a336 336 0 1 1-238 99" fill="none" stroke="url(#ring)" stroke-linecap="round" stroke-width="58" filter="url(#glow)"/>
+  <path d="M512 684c-96-70-190-149-190-251 0-66 48-118 111-118 40 0 66 18 79 41 13-23 39-41 79-41 63 0 111 52 111 118 0 102-94 181-190 251z" fill="#fff0f8"/>
+  <path d="M512 642c-72-54-146-115-146-198 0-43 31-78 72-78 34 0 57 20 74 52 17-32 40-52 74-52 41 0 72 35 72 78 0 83-74 144-146 198z" fill="#ff6eb4"/>
+</svg>

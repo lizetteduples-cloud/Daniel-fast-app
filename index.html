@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="Daniel Fast"/>
+<meta name="theme-color" content="#c2185b"/>
+<link rel="manifest" href="./manifest.webmanifest"/>
+<title>Daniel Fast 💖</title>
+<script src="./vendor/react.production.min.js"></script>
+<script src="./vendor/react-dom.production.min.js"></script>
+<script src="./vendor/babel.min.js"></script>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+  html,body,#root{min-height:100%;background:#fff5fa}
+  body{overscroll-behavior:none}
+  button:active{transform:scale(0.96)}
+  button{transition:all 0.18s ease}
+  input[type=time]{color-scheme:light}
+  ::-webkit-scrollbar{width:4px;height:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(216,27,96,0.4);border-radius:4px}
+
+  @keyframes slideDown{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeSnippet{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes heartbeat{0%,100%{transform:scale(1)}14%{transform:scale(1.22)}28%{transform:scale(1)}42%{transform:scale(1.12)}70%{transform:scale(1)}}
+  @keyframes glowPulse{0%,100%{filter:drop-shadow(0 0 6px rgba(255,48,133,0.6))}50%{filter:drop-shadow(0 0 18px rgba(255,48,133,1))}}
+  @keyframes floatBlob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-18px) scale(1.04)}}
+  @keyframes shimmerBorder{0%,100%{border-color:rgba(255,80,150,0.18)}50%{border-color:rgba(255,80,150,0.38)}}
+  @keyframes ringAppear{from{stroke-dashoffset:553}to{stroke-dashoffset:var(--dash-off)}}
+  @keyframes pop{0%{transform:scale(0)}55%{transform:scale(1.28)}100%{transform:scale(1)}}
+  @keyframes riseIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes popBounce{0%{transform:scale(0.4);opacity:0}60%{transform:scale(1.15);opacity:1}100%{transform:scale(1)}}
+
+  .tick-pop{animation:pop 0.45s cubic-bezier(.18,.89,.32,1.28)}
+  .rise-in{animation:riseIn 0.5s ease both}
+  .heart-icon{display:inline-block;animation:heartbeat 2.6s ease-in-out infinite}
+  .glow-emoji{display:inline-block;animation:glowPulse 3s ease-in-out infinite}
+  .blob{position:fixed;border-radius:50%;pointer-events:none;z-index:0;animation:floatBlob 9s ease-in-out infinite}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useEffect,useRef,useCallback}=React;
+const FAST_HOURS=16,EAT_HOURS=8,WATER_GOAL=8,ROOIBOS_GOAL=5;
+/* TODO: replace with your hosted privacy policy URL before Play Store submission */
+const PRIVACY_URL="https://lizetteduples-cloud.github.io/danielfast.app/privacy.html";
+
+/* ─── PALETTE ─── */
+const P={
+  bg:"linear-gradient(160deg, #fff8fb 0%, #ffeef5 52%, #ffe3ef 100%)",
+  headerBg:"linear-gradient(135deg, #e91e63 0%, #c2185b 55%, #ad1457 100%)",
+  headerBorder:"rgba(255,255,255,0.35)",
+  accent:"#d81b60",accentSoft:"#c2185b",accentDeep:"#ad1457",
+  accentGlow:"rgba(216,27,96,0.28)",gold:"#a86a00",
+  cardBg:"rgba(255,255,255,0.72)",cardBorder:"rgba(216,27,96,0.18)",
+  textPrimary:"#3d0a26",textSub:"#7a2348",textFaint:"#a8597e",
+  ringTrack:"rgba(216,27,96,0.14)",ringFill1:"#c2185b",ringFill2:"#ff79ab",
+  btnPrimary:"linear-gradient(135deg, #c2185b 0%, #e91e63 55%, #ff79ab 100%)",
+  btnSched:"rgba(216,27,96,0.08)",btnEnd:"linear-gradient(135deg, #ad1457, #e91e63)",
+  pillActive:"#c2185b",pillActiveTxt:"#ffffff",
+  waterBorder:"rgba(142,36,170,0.30)",waterAccent:"#7b1fa2",waterDeep:"#8e24aa",
+  rooibosBorder:"rgba(216,27,96,0.22)",
+};
+
+/* ─── DATA (unchanged) ─── */
+const inspirations=[
+  {quote:"Your body is healing with every passing hour. Hold on.",scripture:"Isaiah 40:31 — Those who wait on the Lord shall renew their strength.",emoji:"🦅"},
+  {quote:"Discipline is the bridge between your goals and your results.",scripture:"1 Corinthians 9:27 — I discipline my body and keep it under control.",emoji:"💎"},
+  {quote:"Every craving you overcome is a victory written in your cells.",scripture:"Romans 12:1 — Offer your body as a living sacrifice, holy and pleasing to God.",emoji:"🔥"},
+  {quote:"Fasting is not punishment — it is a gift you give your future self.",scripture:"Matthew 6:17–18 — Fast in secret, and your Father who sees in secret will reward you.",emoji:"💖"},
+  {quote:"Transformation happens in the quiet, unseen hours. Trust the process.",scripture:"James 1:4 — Let perseverance finish its work so that you may be mature and complete.",emoji:"🦋"},
+  {quote:"You are not hungry. You are healing. There is a difference.",scripture:"Jeremiah 30:17 — I will restore health to you and heal your wounds, says the Lord.",emoji:"🌸"},
+  {quote:"Like water, keep flowing. Obstacles cannot stop a determined spirit.",scripture:"Philippians 4:13 — I can do all things through Christ who strengthens me.",emoji:"✨"},
+  {quote:"The sunrise of a healthier, stronger you is already on its way.",scripture:"Lamentations 3:23 — His mercies are new every morning; great is His faithfulness.",emoji:"🌅"},
+  {quote:"Every hour fasted is proof that you are more powerful than your urges.",scripture:"Galatians 5:22–23 — The fruit of the Spirit includes self-control.",emoji:"💪"},
+  {quote:"You are not giving up food — you are making space for something greater.",scripture:"Daniel 1:12 — Test your servants for ten days; give us only vegetables and water.",emoji:"🙏"},
+];
+const recipes=[
+  {name:"Hummus & Veggie Sticks",emoji:"🥕",tag:"Quick · 10 min",category:"Snack",ingredients:["1 can chickpeas","2 tbsp olive oil","1 lemon (juiced)","2 garlic cloves","Salt to taste"],steps:["Blend all ingredients until smooth.","Adjust lemon and salt to taste.","Serve with cucumber, carrot, and celery sticks."]},
+  {name:"Avocado Rye Crispbread",emoji:"🥑",tag:"Super Easy · 5 min",category:"Snack",ingredients:["2 ripe avocados","Juice of 1 lemon","Sea salt & pepper","Whole-grain rye crispbread","Cherry tomatoes"],steps:["Mash avocado with lemon, salt, and pepper.","Spread generously on crispbread.","Top with sliced cherry tomatoes."]},
+  {name:"Fruit & Nut Bowl",emoji:"🍇",tag:"No Cook · 3 min",category:"Snack",ingredients:["1 apple (sliced)","Handful of grapes","1 banana","Raw almonds","Raw walnuts"],steps:["Slice fruit into a bowl.","Add nuts on top.","No sugar — enjoy as is."]},
+  {name:"Roasted Chickpeas",emoji:"🫘",tag:"Batch Cook · 30 min",category:"Snack",ingredients:["1 can chickpeas (drained)","2 tbsp olive oil","1 tsp cumin","½ tsp paprika","Salt"],steps:["Pat chickpeas dry with paper towel.","Toss with oil and spices.","Roast at 200°C for 25–30 min, shaking halfway."]},
+  {name:"Red Lentil Soup",emoji:"🍲",tag:"Warm & Filling · 25 min",category:"Meal",ingredients:["1 cup red lentils","2 tomatoes (diced)","1 onion","3 garlic cloves","1 tsp cumin","Vegetable stock"],steps:["Sauté onion and garlic.","Add lentils, tomatoes, cumin, and stock.","Simmer 20 min until soft. Season with salt and lemon."]},
+  {name:"Overnight Oats",emoji:"🥣",tag:"Prep Ahead · 5 min",category:"Breakfast",ingredients:["½ cup rolled oats","1 cup unsweetened almond milk","Mixed berries","1 tsp chia seeds","Pure honey (optional)"],steps:["Mix oats and almond milk in a jar.","Refrigerate overnight.","Top with berries and chia seeds in the morning."]},
+  {name:"Sweet Potato & Spinach Bowl",emoji:"🍠",tag:"Nourishing · 35 min",category:"Meal",ingredients:["2 medium sweet potatoes","2 cups fresh spinach","Olive oil","Lemon juice","Sesame seeds"],steps:["Cube and roast sweet potato at 200°C for 30 min.","Toss warm with spinach.","Drizzle with olive oil and lemon. Top with sesame seeds."]},
+  {name:"Brown Rice Stir-fry",emoji:"🥦",tag:"Filling · 20 min",category:"Meal",ingredients:["1 cup cooked brown rice","Broccoli florets","Red pepper","Snap peas","Sesame oil","2 garlic cloves","Tamari"],steps:["Heat sesame oil in a pan.","Stir-fry vegetables with garlic for 5–7 min.","Add tamari and serve over brown rice."]},
+  {name:"Black Bean Lettuce Tacos",emoji:"🌮",tag:"Fun · 15 min",category:"Meal",ingredients:["1 can black beans","1 tsp cumin","Lime juice","Lettuce leaves","Fresh salsa","Avo slices"],steps:["Season beans with cumin, lime, and salt.","Warm briefly in a pan.","Serve in lettuce leaves with salsa and avo."]},
+  {name:"Cucumber & Tomato Salad",emoji:"🥗",tag:"Refreshing · 5 min",category:"Snack",ingredients:["1 cucumber (diced)","2 tomatoes (diced)","½ red onion","Fresh parsley","Olive oil","Lemon juice","Salt"],steps:["Chop all vegetables.","Toss with olive oil, lemon, and salt.","Garnish with fresh parsley."]},
+];
+const waterSchedule=[
+  {time:"06:30",label:"Wake up glass",note:"Before coffee, before phone — water first."},
+  {time:"09:00",label:"Mid-morning",note:"Keep energy steady during the fast."},
+  {time:"11:00",label:"Late morning",note:"Almost halfway through your fast!"},
+  {time:"13:00",label:"Lunch time glass",note:"Drink before your first meal."},
+  {time:"15:00",label:"Mid-afternoon",note:"Beat the afternoon slump with water."},
+  {time:"17:00",label:"Late afternoon",note:"Wind down well-hydrated."},
+  {time:"19:00",label:"Evening glass 1",note:"Sip slowly — no chugging before bed."},
+  {time:"20:30",label:"Evening glass 2",note:"Last glass before your fast begins again."},
+];
+const rooibosSchedule=[
+  {time:"07:00",label:"Morning cup",note:"Warm, calming, antioxidant-rich start."},
+  {time:"10:00",label:"Mid-morning cup",note:"Curbs hunger during the fast beautifully."},
+  {time:"13:00",label:"Afternoon cup",note:"Pairs well with your eating window."},
+  {time:"16:00",label:"Late afternoon cup",note:"Caffeine-free energy boost."},
+  {time:"20:00",label:"Evening cup",note:"Wind down and prepare for another great fast."},
+];
+const bibleReadingPlan=[
+  {day:1,section:"I: Humble",title:"Hungry For God",ref:"Daniel 1:12-16",url:"https://www.bible.com/bible/111/DAN.1.12-16.NIV",devotion:"Daniel and his friends were taken captive to Babylon as teenagers. Yet they were HUNGRIER FOR GOD than for the king's choice foods. They rejected the bounties of Babylon to receive the blessings of God. When we choose to fast and deny ourselves, we open the door for God's transformation — producing love, joy, peace, patience, kindness, goodness, and self-control in us."},
+  {day:2,section:"I: Humble",title:"Who's Your Daniel?",ref:"Daniel 1:17-21",url:"https://www.bible.com/bible/111/DAN.1.17-21.NIV",devotion:"God gave Daniel and his three friends knowledge, understanding, and wisdom beyond all others. Who is your Daniel — the person in your life who challenges you to live differently for God? Find your community for this fast."},
+  {day:3,section:"I: Humble",title:"Purpose & Resolve",ref:"Daniel 1:8",url:"https://www.bible.com/bible/111/DAN.1.8.NIV",devotion:"Daniel resolved not to defile himself. Resolve is a decision you make before the temptation arrives. Before this fast gets hard, settle it in your heart: I will honour God with what I put in my body and in my mind."},
+  {day:4,section:"I: Humble",title:"God's Favour",ref:"Daniel 1:9",url:"https://www.bible.com/bible/111/DAN.1.9.NIV",devotion:"God caused Daniel to receive favour and compassion. When you honour God, He opens doors no person can shut. Trust that your sacrifice is being seen and that God is working behind the scenes on your behalf."},
+  {day:5,section:"I: Humble",title:"Humility Before God",ref:"Isaiah 58:6-7",url:"https://www.bible.com/bible/111/ISA.58.6-7.NIV",devotion:"True fasting is not just about what you eat — it's about loosening chains of injustice, setting the oppressed free, sharing food with the hungry, and clothing the naked. Let your fast move outward into the world."},
+  {day:6,section:"I: Humble",title:"The Rewards of Fasting",ref:"Isaiah 58:8-9",url:"https://www.bible.com/bible/111/ISA.58.8-9.NIV",devotion:"When you fast God's way, your light breaks forth like dawn, your healing comes quickly, and when you call, God answers. The rewards of a sincere fast are supernatural and deeply personal."},
+  {day:7,section:"I: Humble",title:"Rest & Reflection",ref:"Psalm 46:10",url:"https://www.bible.com/bible/111/PSA.46.10.NIV",devotion:"Be still and know that He is God. Take today to rest in His presence. You don't have to perform or produce — just be still. Fasting creates space for silence, and in the silence, God speaks."},
+  {day:8,section:"II: Pray",title:"The Power of Prayer",ref:"Daniel 6:10",url:"https://www.bible.com/bible/111/DAN.6.10.NIV",devotion:"Even when it was illegal to pray, Daniel went to his window three times a day and prayed. Prayer was not a reaction to crisis — it was his lifestyle. Build prayer into your daily rhythm this week."},
+  {day:9,section:"II: Pray",title:"Ask, Seek, Knock",ref:"Matthew 7:7-8",url:"https://www.bible.com/bible/111/MAT.7.7-8.NIV",devotion:"Ask and it will be given to you. Seek and you will find. Knock and the door will be opened. Fasting sharpens your asking. What specific breakthrough are you believing God for right now?"},
+  {day:10,section:"II: Pray",title:"Praying With Confidence",ref:"1 John 5:14-15",url:"https://www.bible.com/bible/111/1JN.5.14-15.NIV",devotion:"This is the confidence we have: if we ask anything according to His will, He hears us. Fasting helps align our will with God's will. What do you sense God saying as you pray today?"},
+  {day:11,section:"II: Pray",title:"Fasting & Prayer Together",ref:"Matthew 6:16-18",url:"https://www.bible.com/bible/111/MAT.6.16-18.NIV",devotion:"Jesus said WHEN you fast — not IF. He assumed fasting would be part of His followers' lives. Fast quietly, without drawing attention, and your Father who sees in secret will reward you openly."},
+  {day:12,section:"II: Pray",title:"Intercession",ref:"Daniel 9:3-5",url:"https://www.bible.com/bible/111/DAN.9.3-5.NIV",devotion:"Daniel fasted and prayed not just for himself — he interceded for his entire nation. Who are you standing in the gap for? Use today to pray specifically for someone who needs a breakthrough."},
+  {day:13,section:"II: Pray",title:"Listening to God",ref:"Habakkuk 2:1",url:"https://www.bible.com/bible/111/HAB.2.1.NIV",devotion:"I will stand at my watch and look to see what God will say to me. Fasting quiets the noise so you can hear. Spend time today in silence after prayer — listening is just as important as asking."},
+  {day:14,section:"II: Pray",title:"Halfway! Keep Going",ref:"Galatians 6:9",url:"https://www.bible.com/bible/111/GAL.6.9.NIV",devotion:"Do not become weary in doing good, for at the proper time you will reap a harvest if you do not give up. You are halfway there! Everything you have invested is still counting. Keep going — the harvest is coming."},
+  {day:15,section:"III: Believe",title:"The God Who Delivers",ref:"Daniel 3:17-18",url:"https://www.bible.com/bible/111/DAN.3.17-18.NIV",devotion:"Shadrach, Meshach, and Abednego declared: our God CAN deliver us — but even if He does not, we will not bow. Faith is not about guaranteeing outcomes. It's about trusting God regardless. What furnace are you facing?"},
+  {day:16,section:"III: Believe",title:"Belief That Moves Mountains",ref:"Mark 11:22-24",url:"https://www.bible.com/bible/111/MRK.11.22-24.NIV",devotion:"Have faith in God. Whatever you ask for in prayer, believe that you have received it, and it will be yours. Fasting supercharges your faith. Pray bold, specific prayers today and believe before you see the result."},
+  {day:17,section:"III: Believe",title:"God's Plans for You",ref:"Jeremiah 29:11",url:"https://www.bible.com/bible/111/JER.29.11.NIV",devotion:"I know the plans I have for you — plans to prosper you and not to harm you, plans to give you hope and a future. This fast is not punishment — it is a pathway to the future God has designed for you."},
+  {day:18,section:"III: Believe",title:"Strength in Weakness",ref:"2 Corinthians 12:9-10",url:"https://www.bible.com/bible/111/2CO.12.9-10.NIV",devotion:"My power is made perfect in weakness. When you fast, you feel your weakness acutely — your hunger, your cravings, your limitations. That is exactly the place where God's strength can show up most powerfully."},
+  {day:19,section:"III: Believe",title:"Renewed Strength",ref:"Isaiah 40:31",url:"https://www.bible.com/bible/111/ISA.40.31.NIV",devotion:"Those who hope in the Lord will renew their strength. They will soar on wings like eagles, run and not grow weary, walk and not faint. You are in the final stretch. Let God renew you for what is ahead."},
+  {day:20,section:"III: Believe",title:"A New Thing",ref:"Isaiah 43:18-19",url:"https://www.bible.com/bible/111/ISA.43.18-19.NIV",devotion:"Forget the former things; do not dwell on the past. See, I am doing a new thing! Do you not perceive it? This fast has been clearing out the old to make room for the new. Get ready — God is doing something fresh."},
+  {day:21,section:"III: Believe",title:"It Is Finished — Well Done",ref:"Philippians 4:13",url:"https://www.bible.com/bible/111/PHP.4.13.NIV",devotion:"I can do all things through Christ who strengthens me. YOU DID IT! Twenty-one days of fasting, prayer, scripture, and sacrifice. This is not the end — it is a beginning. Carry the discipline, the faith, and the hunger for God forward into your everyday life. Well done."},
+];
+const waterFacts=[
+  {icon:"🧠",fact:"Your brain is 75% water. Even mild dehydration shrinks brain tissue and impairs focus, memory, and mood."},
+  {icon:"🔥",fact:"Drinking cold water boosts your metabolism by up to 30% for 30–40 minutes as your body works to warm it up."},
+  {icon:"💪",fact:"Muscles are 79% water. Staying hydrated reduces cramps, improves strength, and speeds up post-exercise recovery."},
+  {icon:"🫀",fact:"Your heart is 73% water. Proper hydration keeps blood flowing smoothly and reduces strain on your cardiovascular system."},
+  {icon:"✨",fact:"Water flushes toxins through your kidneys. Each glass you drink helps your body filter waste more efficiently."},
+  {icon:"🌡️",fact:"Water regulates your core body temperature through sweat and respiration — your built-in air conditioning system."},
+  {icon:"🦴",fact:"Cartilage in your joints is 80% water. Staying hydrated lubricates joints and reduces the risk of pain and stiffness."},
+  {icon:"🍽️",fact:"Drinking a glass of water before meals reduces calorie intake by up to 13% — it helps you feel full faster."},
+];
+const rooibosFacts=[
+  {icon:"🌿",fact:"Rooibos contains aspalathin — a unique antioxidant found ONLY in rooibos that helps regulate blood sugar and reduce insulin resistance."},
+  {icon:"😴",fact:"Rooibos is completely caffeine-free, making it the perfect evening drink. It won't disrupt your sleep cycles like regular tea or coffee."},
+  {icon:"🫀",fact:"Studies show rooibos lowers LDL (bad) cholesterol and raises HDL (good) cholesterol, supporting a healthy heart."},
+  {icon:"🦴",fact:"Rooibos contains calcium, manganese, and fluoride — all essential for strong bones and teeth."},
+  {icon:"🛡️",fact:"Rooibos has powerful anti-inflammatory properties that may reduce the risk of chronic diseases like diabetes, heart disease, and cancer."},
+];
+const reflections=["What is God saying to you personally through this scripture today?","How can you apply this truth to your fast and your daily life?","Write down one thing you are believing God for during this 21-day fast.","Who in your life needs prayer today? Pause and pray for them.","What does this passage reveal about God's character?"];
+
+/* ─── HELPERS (unchanged) ─── */
+function pad(n){return String(Math.floor(n)).padStart(2,"0");}
+function fmtTime(d){if(!d)return"—";return d.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"});}
+function fmtDate(d){if(!d)return"";return d.toLocaleDateString("en-ZA",{weekday:"short",day:"numeric",month:"short"});}
+function todayKey(){return new Date().toISOString().split("T")[0];}
+
+/* ─── NOTIFICATIONS (Capacitor LocalNotifications native, web Notification fallback) ─── */
+const Cap=(typeof window!=="undefined")&&window.Capacitor;
+const LN=Cap&&Cap.Plugins&&Cap.Plugins.LocalNotifications;
+function nativeNotifs(){return !!LN;}
+async function reqNotifPerm(){
+  try{
+    if(LN){const r=await LN.requestPermissions();return (r.display||r.receive)==="granted";}
+    if("Notification"in window){const p=await Notification.requestPermission();return p==="granted";}
+  }catch(e){}
+  return false;
+}
+async function checkNotifPerm(){
+  try{
+    if(LN){const r=await LN.checkPermissions();return (r.display||r.receive)==="granted";}
+    if("Notification"in window)return Notification.permission==="granted";
+  }catch(e){}
+  return false;
+}
+/* immediate / "now" notification */
+function sendNote(t,b){
+  if(LN){LN.schedule({notifications:[{id:Math.floor(Math.random()*1000000)+500000,title:"💖 "+t,body:b||"",schedule:{at:new Date(Date.now()+250)}}]}).catch(()=>{});return;}
+  if("Notification"in window&&Notification.permission==="granted")new Notification("💖 "+t,{body:b});
+}
+/* one-off scheduled notification at a future Date. returns true if natively scheduled */
+function scheduleAt(id,t,b,date){
+  if(LN){LN.schedule({notifications:[{id,title:"💖 "+t,body:b||"",schedule:{at:date,allowWhileIdle:true}}]}).catch(()=>{});return true;}
+  return false;
+}
+/* daily repeating notification at hour:minute. returns true if natively scheduled */
+function scheduleDaily(id,t,b,hour,minute){
+  if(LN){LN.schedule({notifications:[{id,title:"💖 "+t,body:b||"",schedule:{on:{hour,minute},repeats:true,allowWhileIdle:true}}]}).catch(()=>{});return true;}
+  return false;
+}
+function cancelNotif(id){if(LN){LN.cancel({notifications:[{id}]}).catch(()=>{});}}
+/* stable ids: water 1000+i, rooibos 2000+i, fast-complete 3001, fast-begin 3002 */
+const ALL_REMINDERS=[
+  ...waterSchedule.map((w,i)=>{const[h,m]=w.time.split(":").map(Number);return{key:"w-"+w.time,id:1000+i,h,m,title:"💧 Time for a glass of water",body:w.note};}),
+  ...rooibosSchedule.map((r,i)=>{const[h,m]=r.time.split(":").map(Number);return{key:"r-"+r.time,id:2000+i,h,m,title:"🫖 Time for your Rooibos tea",body:r.note};}),
+];
+const REM_BY_KEY={};ALL_REMINDERS.forEach(r=>{REM_BY_KEY[r.key]=r;});
+const FAST_COMPLETE_ID=3001,FAST_BEGIN_ID=3002;
+
+function ls(k){try{return localStorage.getItem(k);}catch{return null;}}
+function lss(k,v){try{localStorage.setItem(k,v);}catch{}}
+function loadState(){try{const r=ls("ff_"+todayKey());return r?JSON.parse(r):null;}catch{return null;}}
+function fmtTimeInput(d){return pad(d.getHours())+":"+pad(d.getMinutes());}
+const motivators=["every hour is rewriting your story.","your body and spirit are growing stronger.","keep flowing — you are unstoppable.","heaven is cheering you on.","discipline today, freedom tomorrow.","you are doing something most people never will.","one day closer to your breakthrough."];
+function motivate(done,total){
+  if(done<=0)return"Your journey begins today. One day at a time. 💖";
+  if(done>=total)return`All ${total} days complete! You finished what you started. 👑🎉`;
+  const left=total-done;
+  const ord=done===1?"Day one is done!":`Day ${done} is done!`;
+  return`${ord} ${left} to go — ${motivators[(done-1)%motivators.length]}`;
+}
+
+/* ─── APP ─── */
+function App(){
+  const td=loadState();
+  const [fastLength,setFastLength]=useState(()=>{const v=ls("ff_fastlength");return v?parseInt(v):null;});
+  const [tab,setTab]=useState(fastLength?"timer":"start");
+  const [journeyDays,setJourneyDays]=useState(()=>{try{const r=ls("ff_journeydays");return r?JSON.parse(r):[];}catch{return[];}});
+  const [poppedDay,setPoppedDay]=useState(null);
+  const [reminders,setReminders]=useState(()=>{try{const r=ls("ff_reminders");return r?JSON.parse(r):[];}catch{return[];}});
+  const [backMode,setBackMode]=useState(false);
+  const [backTime,setBackTime]=useState(()=>fmtTimeInput(new Date()));
+  const [isFasting,setIsFasting]=useState(td?.isFasting||false);
+  const [fastStart,setFastStart]=useState(td?.fastStart?new Date(td.fastStart):null);
+  const [elapsed,setElapsed]=useState(0);
+  const [water,setWater]=useState(td?.water||0);
+  const [rooibos,setRooibos]=useState(td?.rooibos||0);
+  const [inspoIdx,setInspoIdx]=useState(0);
+  const [inspoFade,setInspoFade]=useState(true);
+  const [expandedRecipe,setExpandedRecipe]=useState(null);
+  const [recipeFilter,setRecipeFilter]=useState("All");
+  const [history,setHistory]=useState(()=>{try{const r=ls("ff_history");return r?JSON.parse(r):[];}catch{return[];}});
+  const [customTime,setCustomTime]=useState(()=>ls("ff_starttime")||"20:00");
+  const [showSettings,setShowSettings]=useState(false);
+  const [notifOn,setNotifOn]=useState("Notification"in window&&Notification.permission==="granted");
+  const [fastDone,setFastDone]=useState(false);
+  const [schedMode,setSchedMode]=useState(false);
+  const [bibleDay,setBibleDay]=useState(()=>{const v=ls("ff_bibleday");return v?parseInt(v):1;});
+  const [doneDays,setDoneDays]=useState(()=>{try{const r=ls("ff_completeddays");return r?JSON.parse(r):[];}catch{return[];}});
+  const iRef=useRef(null);const nRef=useRef([]);
+
+  const fastDur=FAST_HOURS*3600;
+  const prog=Math.min((elapsed/fastDur)*100,100);
+  const rem=Math.max(fastDur-elapsed,0);
+  const remH=Math.floor(rem/3600),remM=Math.floor((rem%3600)/60),remS=rem%60;
+  const elH=Math.floor(elapsed/3600),elM=Math.floor((elapsed%3600)/60);
+  const eatStart=fastStart?new Date(fastStart.getTime()+FAST_HOURS*3600000):null;
+  const eatEnd=eatStart?new Date(eatStart.getTime()+EAT_HOURS*3600000):null;
+
+  useEffect(()=>{try{lss("ff_"+todayKey(),JSON.stringify({isFasting,fastStart:fastStart?.toISOString(),water,rooibos}));}catch{}},[isFasting,fastStart,water,rooibos]);
+  useEffect(()=>{lss("ff_journeydays",JSON.stringify(journeyDays));},[journeyDays]);
+  useEffect(()=>{lss("ff_reminders",JSON.stringify(reminders));},[reminders]);
+  const rRef=useRef([]);
+  useEffect(()=>{
+    // NATIVE: schedule a daily-repeating notification per enabled reminder; cancel disabled ones.
+    if(nativeNotifs()){
+      ALL_REMINDERS.forEach(r=>{
+        if(notifOn&&reminders.includes(r.key))scheduleDaily(r.id,r.title,r.body,r.h,r.m);
+        else cancelNotif(r.id);
+      });
+      return;
+    }
+    // WEB FALLBACK: arm setTimeouts for today only (fires while the app is open).
+    rRef.current.forEach(clearTimeout);rRef.current=[];
+    if(!notifOn)return;
+    const now=new Date();
+    ALL_REMINDERS.forEach(r=>{
+      if(!reminders.includes(r.key))return;
+      const t=new Date();t.setHours(r.h,r.m,0,0);
+      const d=t-now;if(d>0)rRef.current.push(setTimeout(()=>sendNote(r.title,r.body),d));
+    });
+    return()=>{rRef.current.forEach(clearTimeout);rRef.current=[];};
+  },[reminders,notifOn]);
+  useEffect(()=>{
+    if(isFasting&&fastStart){
+      iRef.current=setInterval(()=>{
+        const diff=Math.floor((new Date()-fastStart)/1000);
+        setElapsed(diff);
+        if(diff>=fastDur&&!fastDone){setFastDone(true);sendNote("Fast Complete!","Your 16-hour fast is done! Eating window now open 💖");}
+      },1000);
+    }else clearInterval(iRef.current);
+    return()=>clearInterval(iRef.current);
+  },[isFasting,fastStart]);
+  useEffect(()=>{
+    const t=setInterval(()=>{setInspoFade(false);setTimeout(()=>{setInspoIdx(i=>(i+1)%inspirations.length);setInspoFade(true);},400);},35000);
+    return()=>clearInterval(t);
+  },[]);
+  // On mount, sync notifOn with the actual (native or web) permission state.
+  useEffect(()=>{checkNotifPerm().then(g=>{if(g)setNotifOn(true);});},[]);
+
+  const scheduleFastComplete=(start)=>{const at=new Date(start.getTime()+FAST_HOURS*3600000);if(at>new Date())scheduleAt(FAST_COMPLETE_ID,"Fast Complete! 🎉",`Your ${FAST_HOURS}-hour fast is done — eating window now open until ${fmtTime(new Date(at.getTime()+EAT_HOURS*3600000))} 💖`,at);};
+  const startFast=()=>{const now=new Date();setFastStart(now);setIsFasting(true);setElapsed(0);setFastDone(false);cancelNotif(FAST_BEGIN_ID);scheduleFastComplete(now);sendNote("Fast Started!",`Eating window opens at ${fmtTime(new Date(now.getTime()+FAST_HOURS*3600000))}`);};
+  const startSched=()=>{
+    const[h,m]=customTime.split(":").map(Number);const s=new Date();s.setHours(h,m,0,0);
+    if(s>new Date()){
+      // Native: a real OS notification fires at start time even if the app is closed.
+      if(!scheduleAt(FAST_BEGIN_ID,"Fast Starting Now ⏱",`Your ${FAST_HOURS}:8 fast begins. You've got this 💖`,s))
+        sendNote("Fast Scheduled",`Begins at ${customTime} 💖`);
+      else sendNote("Fast Scheduled",`A reminder will pop up at ${customTime} 💖`);
+      scheduleFastComplete(s);
+      setTimeout(()=>{setFastStart(s);setIsFasting(true);setElapsed(0);setFastDone(false);sendNote("Fast Started!","Your 16-hour fast has begun!");},s-new Date());
+      lss("ff_starttime",customTime);setSchedMode(false);
+    }
+    else startFast();
+  };
+  const endFast=()=>{
+    if(!fastStart)return;
+    const rec={date:fmtDate(fastStart),startedAt:fmtTime(fastStart),endedAt:fmtTime(new Date()),hoursCompleted:Math.min(elH+elM/60,16).toFixed(1),water,rooibos,completed:elapsed>=fastDur};
+    const nh=[rec,...history];setHistory(nh);try{lss("ff_history",JSON.stringify(nh.slice(-30)));}catch{}
+    if(rec.completed&&fastLength)markNextJourneyDay();
+    cancelNotif(FAST_COMPLETE_ID);cancelNotif(FAST_BEGIN_ID);
+    setIsFasting(false);setFastStart(null);setElapsed(0);setFastDone(false);
+  };
+  const startBack=()=>{
+    const[h,m]=backTime.split(":").map(Number);const s=new Date();s.setHours(h,m,0,0);
+    if(s>new Date())s.setDate(s.getDate()-1); // chosen time is later than now → it was yesterday
+    setFastStart(s);setIsFasting(true);setFastDone(false);setBackMode(false);
+    setElapsed(Math.floor((new Date()-s)/1000));
+    cancelNotif(FAST_BEGIN_ID);scheduleFastComplete(s);
+    sendNote("Fast Backdated",`Counting from ${fmtTime(s)} · eating window opens at ${fmtTime(new Date(s.getTime()+FAST_HOURS*3600000))}`);
+  };
+  const chooseFast=n=>{setFastLength(n);lss("ff_fastlength",String(n));sendNote("Let's go!",`Your ${n}-day fast journey starts now 💖`);};
+  const markNextJourneyDay=()=>{
+    const total=fastLength||21;
+    let next=1;while(journeyDays.includes(next)&&next<=total)next++;
+    if(next<=total)toggleJourney(next,true);
+  };
+  const toggleJourney=(day,forceOn)=>{
+    const has=journeyDays.includes(day);
+    if(has&&!forceOn){setJourneyDays(journeyDays.filter(d=>d!==day));}
+    else if(!has){setJourneyDays([...journeyDays,day].sort((a,b)=>a-b));setPoppedDay(day);setTimeout(()=>setPoppedDay(null),700);}
+  };
+  const toggleReminder=async(k)=>{
+    if(!notifOn){const g=await reqNotifPerm();if(g)setNotifOn(true);else{alert("Enable notifications to get reminders 💖");return;}}
+    if(reminders.includes(k)){setReminders(reminders.filter(x=>x!==k));}
+    else{setReminders([...reminders,k]);const r=REM_BY_KEY[k];sendNote("Reminder set 🔔",nativeNotifs()?`We'll remind you daily at ${r&&pad(r.h)+":"+pad(r.m)}.`:"We'll nudge you at that time today.");}
+  };
+  const goDay=d=>{setBibleDay(d);lss("ff_bibleday",String(d));};
+  const markDone=()=>{
+    const updated=[...new Set([...doneDays,bibleDay])];setDoneDays(updated);lss("ff_completeddays",JSON.stringify(updated));
+    if(bibleDay<21)goDay(bibleDay+1);
+  };
+  const enableNotifs=async()=>{const g=await reqNotifPerm();if(g){setNotifOn(true);sendNote("Reminders On!","Tap the 🔔 on any water or tea time to schedule it 🌸");}};
+
+  const circ=2*Math.PI*88;
+  const dashOff=circ-(prog/100)*circ;
+  const inspo=inspirations[inspoIdx];
+  const cats=["All","Snack","Meal","Breakfast"];
+  const filtered=recipeFilter==="All"?recipes:recipes.filter(r=>r.category===recipeFilter);
+  const todayBible=bibleReadingPlan[bibleDay-1];
+  const isBibleDone=doneDays.includes(bibleDay);
+  const jTotal=fastLength||21;
+  const jDone=journeyDays.filter(d=>d<=jTotal).length;
+
+  /* ─── STYLE HELPERS ─── */
+  const C=(ex={})=>({
+    background:P.cardBg,
+    border:`1px solid ${P.cardBorder}`,
+    borderRadius:"22px",
+    padding:"20px",
+    marginBottom:"16px",
+    backdropFilter:"blur(12px)",
+    WebkitBackdropFilter:"blur(12px)",
+    boxShadow:`0 6px 20px rgba(216,27,96,0.10), inset 0 1px 0 rgba(255,255,255,0.6)`,
+    ...ex
+  });
+  const LB={fontSize:"10px",color:P.textFaint,letterSpacing:"2.5px",textTransform:"uppercase",marginBottom:"8px",fontWeight:"600"};
+  const BT=(bg=P.btnPrimary,ex={})=>({
+    padding:"14px 20px",
+    borderRadius:"16px",
+    border:"none",
+    background:bg,
+    color:"#fff",
+    fontSize:"14px",
+    fontWeight:"bold",
+    cursor:"pointer",
+    fontFamily:"inherit",
+    width:"100%",
+    transition:"all 0.2s",
+    boxShadow:bg===P.btnPrimary?`0 6px 26px ${P.accentGlow}`:"none",
+    letterSpacing:"0.5px",
+    ...ex
+  });
+  const PL=a=>({
+    padding:"8px 18px",
+    borderRadius:"22px",
+    border:a?`1px solid ${P.accent}`:"1px solid rgba(216,27,96,0.22)",
+    background:a?P.pillActive:"rgba(255,255,255,0.7)",
+    color:a?P.pillActiveTxt:P.textFaint,
+    fontSize:"12px",
+    cursor:"pointer",
+    fontFamily:"inherit",
+    transition:"all 0.2s",
+    fontWeight:a?"600":"400",
+  });
+
+  return(
+    <div style={{minHeight:"100vh",background:P.bg,fontFamily:"Georgia,'Palatino Linotype',serif",color:P.textPrimary,position:"relative",overflow:"hidden"}}>
+
+      {/* ─── AMBIENT BLOBS ─── */}
+      <div className="blob" style={{width:"360px",height:"360px",background:"rgba(255,20,120,0.09)",filter:"blur(80px)",top:"-100px",right:"-80px",animationDelay:"0s"}}/>
+      <div className="blob" style={{width:"260px",height:"260px",background:"rgba(160,20,200,0.07)",filter:"blur(65px)",bottom:"25%",left:"-70px",animationDelay:"-4s"}}/>
+      <div className="blob" style={{width:"200px",height:"200px",background:"rgba(255,80,160,0.065)",filter:"blur(55px)",bottom:"6%",right:"8%",animationDelay:"-7s"}}/>
+      <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,background:"radial-gradient(circle at 72% 18%, rgba(255,48,133,0.08) 0%, transparent 58%), radial-gradient(circle at 22% 82%, rgba(200,50,150,0.07) 0%, transparent 50%)"}}/>
+
+      {/* ─── HEADER ─── */}
+      <div style={{
+        background:P.headerBg,
+        borderBottom:`1px solid ${P.headerBorder}`,
+        padding:"18px 20px",
+        display:"flex",alignItems:"center",gap:"13px",
+        backdropFilter:"blur(16px)",
+        position:"sticky",top:0,zIndex:100,
+        boxShadow:`0 4px 36px rgba(180,0,80,0.35), inset 0 -1px 0 rgba(255,140,200,0.15)`,
+      }}>
+        <span className="heart-icon" style={{fontSize:"27px",lineHeight:1}}>💖</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:"22px",fontWeight:"bold",color:"#fff",letterSpacing:"2.5px",textShadow:`0 2px 10px rgba(120,0,50,0.45)`}}>Daniel Fast</div>
+          <div style={{fontSize:"10px",color:"rgba(255,230,242,0.85)",letterSpacing:"2px",textTransform:"uppercase",marginTop:"2px"}}>21-Day Journey · 16:8 · Rooibos 💕</div>
+        </div>
+        <button onClick={()=>setShowSettings(!showSettings)} style={{
+          background:"rgba(255,80,150,0.12)",
+          border:`1px solid rgba(255,120,180,0.25)`,
+          borderRadius:"12px",padding:"9px 13px",
+          color:"#ffb8d8",cursor:"pointer",fontSize:"16px",
+          fontFamily:"inherit",
+          boxShadow:"0 2px 8px rgba(200,0,80,0.2)",
+        }}>⚙️</button>
+      </div>
+
+      {/* ─── SETTINGS ─── */}
+      {showSettings&&(
+        <div style={{background:"rgba(255,245,250,0.98)",borderBottom:`1px solid ${P.cardBorder}`,padding:"20px",backdropFilter:"blur(16px)"}}>
+          <div style={{fontSize:"14px",color:P.accentSoft,fontWeight:"bold",marginBottom:"18px",letterSpacing:"1px"}}>⚙️ Settings</div>
+          <div style={LB}>Scheduled Fast Start Time</div>
+          <input type="time" value={customTime} onChange={e=>{setCustomTime(e.target.value);lss("ff_starttime",e.target.value);}} style={{
+            width:"100%",padding:"13px",borderRadius:"14px",marginBottom:"16px",
+            background:"rgba(216,27,96,0.06)",border:`1px solid ${P.cardBorder}`,
+            color:P.textPrimary,fontSize:"16px",fontFamily:"inherit",
+            boxShadow:"inset 0 2px 6px rgba(216,27,96,0.08)",
+          }}/>
+          <div style={LB}>Notifications</div>
+          {notifOn
+            ?<div style={{padding:"13px",background:"rgba(216,27,96,0.1)",borderRadius:"12px",color:P.accentSoft,fontSize:"13px",border:`1px solid rgba(216,27,96,0.2)`}}>✅ Reminders are on 💖</div>
+            :<button onClick={enableNotifs} style={BT(P.btnPrimary)}>🔔 Enable Reminders</button>}
+          {fastLength&&<button onClick={()=>{if(window.confirm("Reset your fast length and day progress?")){setFastLength(null);lss("ff_fastlength","");setJourneyDays([]);setTab("start");setShowSettings(false);}}} style={{...BT("rgba(216,27,96,0.08)"),marginTop:"12px",color:P.accentSoft,border:`1px solid ${P.cardBorder}`,boxShadow:"none"}}>🔄 Change Fast Length</button>}
+
+          <div style={{...LB,marginTop:"20px"}}>Health Disclaimer</div>
+          <div style={{background:"rgba(216,27,96,0.06)",border:`1px solid ${P.cardBorder}`,borderRadius:"14px",padding:"14px 16px",fontSize:"12px",color:P.textSub,lineHeight:1.7}}>
+            ⚠️ Daniel Fast is for general wellness and spiritual reflection only. It is <strong>not medical advice</strong> and is not a medical device, and it does not diagnose, treat, or prevent any condition. Please talk to a qualified healthcare professional before fasting — especially if you are pregnant or breastfeeding, under 18, diabetic, on medication, or managing any medical condition. Stop and seek help if you feel unwell.
+          </div>
+
+          <div style={{...LB,marginTop:"16px"}}>About & Privacy</div>
+          <div style={{background:"rgba(216,27,96,0.06)",border:`1px solid ${P.cardBorder}`,borderRadius:"14px",padding:"14px 16px",fontSize:"12px",color:P.textSub,lineHeight:1.7}}>
+            🔒 Your fasting, hydration and reading data stays on this device. Daniel Fast has no account, no ads, and does not collect or share your personal data.<br/>
+            <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" style={{color:P.accentSoft,textDecoration:"none",fontWeight:"bold"}}>Privacy Policy →</a>
+          </div>
+
+          <button onClick={()=>setShowSettings(false)} style={{...BT("rgba(216,27,96,0.08)"),marginTop:"16px",color:P.accentSoft,border:`1px solid ${P.cardBorder}`,boxShadow:"none"}}>Close</button>
+        </div>
+      )}
+
+      {/* ─── TABS ─── */}
+      <div style={{
+        display:"flex",
+        background:"rgba(255,255,255,0.62)",
+        borderBottom:`1px solid rgba(216,27,96,0.14)`,
+        backdropFilter:"blur(8px)",
+      }}>
+        {[{id:"start",icon:"🌟",label:"Journey"},{id:"timer",icon:"⏱",label:"Timer"},{id:"hydration",icon:"💧",label:"Hydration"},{id:"eat",icon:"🥗",label:"Recipes"},{id:"bible",icon:"📖",label:"Bible"},{id:"history",icon:"📊",label:"History"}].map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{
+            flex:1,padding:"13px 4px 10px",
+            background:tab===t.id?"rgba(255,48,133,0.1)":"none",
+            border:"none",
+            borderBottom:tab===t.id?`2.5px solid ${P.accent}`:"2.5px solid transparent",
+            color:tab===t.id?P.accentSoft:P.textFaint,
+            fontSize:"10px",cursor:"pointer",fontFamily:"inherit",
+            fontWeight:tab===t.id?"700":"400",
+            transition:"all 0.2s",
+            letterSpacing:"0.5px",
+          }}>
+            <div style={{fontSize:"19px",marginBottom:"2px",filter:tab===t.id?`drop-shadow(0 0 5px ${P.accentGlow})`:"none"}}>{t.icon}</div>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{padding:"20px",maxWidth:"500px",margin:"0 auto",paddingBottom:"52px",position:"relative",zIndex:1}}>
+
+        {/* ══════════════════════════════════════════════
+            JOURNEY / START TAB
+        ══════════════════════════════════════════════ */}
+        {tab==="start"&&(
+          <>
+            {!fastLength?(
+              /* ── CHOOSE FAST LENGTH ── */
+              <>
+                <div style={{...C({background:"rgba(255,255,255,0.82)",border:`1px solid rgba(216,27,96,0.22)`}),textAlign:"center"}} className="rise-in">
+                  <div className="glow-emoji" style={{fontSize:"46px",marginBottom:"10px"}}>🌟</div>
+                  <div style={{fontSize:"23px",color:P.accentSoft,fontWeight:"bold",letterSpacing:"0.5px"}}>Welcome to your fast</div>
+                  <div style={{fontSize:"13px",color:P.textSub,marginTop:"10px",lineHeight:1.7}}>Choose how long you want to commit. We'll walk every day with you — one tick box at a time. 💖</div>
+                </div>
+                <div style={LB}>Choose your length</div>
+                {[{n:10,t:"Quick Reset",d:"A focused 10-day cleanse of body and spirit."},{n:15,t:"Deeper Dive",d:"15 days to build real momentum and discipline."},{n:21,t:"Full Daniel Fast",d:"The classic 21-day journey — humble, pray, believe."}].map((o,i)=>(
+                  <button key={o.n} onClick={()=>chooseFast(o.n)} className="rise-in" style={{...C({cursor:"pointer",textAlign:"left",border:`1px solid rgba(216,27,96,0.18)`,background:"rgba(255,255,255,0.78)",width:"100%",animationDelay:(0.05*i)+"s",display:"flex",alignItems:"center",gap:"16px"}),fontFamily:"inherit"}}>
+                    <div style={{minWidth:"58px",height:"58px",borderRadius:"50%",background:P.btnPrimary,color:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",boxShadow:`0 6px 18px ${P.accentGlow}`}}>
+                      <div style={{fontSize:"22px",fontWeight:"bold",lineHeight:1}}>{o.n}</div>
+                      <div style={{fontSize:"8px",letterSpacing:"1px",opacity:0.9}}>DAYS</div>
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:"16px",color:P.accentSoft,fontWeight:"bold"}}>{o.t}</div>
+                      <div style={{fontSize:"12px",color:P.textSub,marginTop:"3px",lineHeight:1.5}}>{o.d}</div>
+                    </div>
+                    <div style={{fontSize:"20px",color:P.accent}}>›</div>
+                  </button>
+                ))}
+              </>
+            ):(
+              /* ── JOURNEY PROGRESS ── */
+              <>
+                <div style={{...C({background:"rgba(255,255,255,0.82)",border:`1px solid rgba(216,27,96,0.22)`}),textAlign:"center"}} className="rise-in">
+                  <div style={{fontSize:"11px",color:P.textFaint,letterSpacing:"2.5px",textTransform:"uppercase"}}>{fastLength}-Day Fast</div>
+                  <div style={{fontSize:"40px",fontWeight:"bold",color:P.accentSoft,lineHeight:1.1,marginTop:"4px"}}>{jDone}<span style={{fontSize:"20px",color:P.textFaint}}> / {jTotal}</span></div>
+                  <div style={{fontSize:"12px",color:P.textFaint,marginTop:"2px"}}>days complete</div>
+                  <div style={{margin:"16px 0 6px",background:"rgba(216,27,96,0.12)",borderRadius:"10px",height:"10px",overflow:"hidden"}}>
+                    <div style={{width:`${(jDone/jTotal)*100}%`,height:"100%",background:`linear-gradient(90deg,${P.accentDeep},${P.accentSoft})`,borderRadius:"10px",transition:"width 0.6s cubic-bezier(.18,.89,.32,1.1)"}}/>
+                  </div>
+                  <div style={{fontSize:"14px",color:P.gold,fontWeight:"bold",marginTop:"12px",lineHeight:1.5}}>{motivate(jDone,jTotal)}</div>
+                </div>
+
+                <div style={C()}>
+                  <div style={LB}>Tap a day as you finish it</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(5, 1fr)",gap:"10px"}}>
+                    {Array.from({length:jTotal}).map((_,i)=>{const day=i+1;const done=journeyDays.includes(day);const popping=poppedDay===day;return(
+                      <button key={day} onClick={()=>toggleJourney(day)} className={popping?"tick-pop":""} style={{
+                        aspectRatio:"1/1",borderRadius:"16px",cursor:"pointer",fontFamily:"inherit",
+                        border:done?`2px solid ${P.accent}`:`2px solid rgba(216,27,96,0.18)`,
+                        background:done?P.btnPrimary:"rgba(255,255,255,0.6)",
+                        color:done?"#fff":P.textFaint,
+                        display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                        boxShadow:done?`0 5px 16px ${P.accentGlow}`:"inset 0 1px 0 rgba(255,255,255,0.6)",
+                        transition:"all 0.25s",
+                      }}>
+                        <div style={{fontSize:done?"20px":"15px",fontWeight:"bold",lineHeight:1}}>{done?"✓":day}</div>
+                        <div style={{fontSize:"8px",letterSpacing:"0.5px",marginTop:"2px",opacity:0.85}}>{done?"DONE":"DAY"}</div>
+                      </button>
+                    );})}
+                  </div>
+                  {jDone>=jTotal&&<div style={{textAlign:"center",marginTop:"16px",fontSize:"15px",color:P.accentSoft,fontWeight:"bold"}}>🎉 You finished your {jTotal}-day fast! 👑</div>}
+                </div>
+
+                <button onClick={()=>setTab("timer")} style={{...BT(P.btnPrimary),padding:"17px",fontSize:"15px"}}>⏱ Go to Today's Timer</button>
+              </>
+            )}
+          </>
+        )}
+
+        {/* ══════════════════════════════════════════════
+            TIMER TAB
+        ══════════════════════════════════════════════ */}
+        {tab==="timer"&&(
+          <>
+            {fastDone&&(
+              <div style={{...C({
+                background:"linear-gradient(135deg,rgba(255,214,232,0.85),rgba(255,190,218,0.8))",
+                border:`1px solid ${P.accent}`,
+                boxShadow:`0 6px 26px rgba(216,27,96,0.22), inset 0 1px 0 rgba(255,255,255,0.6)`,
+              }),textAlign:"center",animation:"slideDown 0.5s ease"}}>
+                <div style={{fontSize:"44px",marginBottom:"6px"}}>🎉</div>
+                <div style={{fontSize:"20px",color:P.accentSoft,fontWeight:"bold",letterSpacing:"0.5px"}}>Fast Complete, gorgeous!</div>
+                <div style={{fontSize:"13px",color:P.textSub,marginTop:"8px",lineHeight:1.7}}>Eating window open until <strong style={{color:P.accentSoft}}>{fmtTime(eatEnd)}</strong>.<br/>Nourish your beautiful body with wisdom. 💖</div>
+              </div>
+            )}
+
+            {/* RING */}
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"8px",margin:"8px 0 24px"}}>
+              <div style={{position:"relative",width:"224px",height:"224px"}}>
+                <div style={{position:"absolute",inset:"-12px",borderRadius:"50%",background:`radial-gradient(circle, ${P.accentGlow} 0%, transparent 68%)`,filter:"blur(16px)",opacity:isFasting?1:0.5,transition:"opacity 0.6s"}}/>
+                <svg width="224" height="224" style={{transform:"rotate(-90deg)",position:"absolute"}}>
+                  <defs>
+                    <linearGradient id="pinkRing" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor={P.ringFill1}/>
+                      <stop offset="100%" stopColor={P.ringFill2}/>
+                    </linearGradient>
+                    <filter id="glow">
+                      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <filter id="softGlow">
+                      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                  </defs>
+                  <circle cx="112" cy="112" r="88" fill="none" stroke={P.ringTrack} strokeWidth="14"/>
+                  <circle cx="112" cy="112" r="88" fill="none"
+                    stroke={prog>=100?P.accentSoft:"url(#pinkRing)"}
+                    strokeWidth="14"
+                    strokeDasharray={circ}
+                    strokeDashoffset={dashOff}
+                    strokeLinecap="round"
+                    filter="url(#glow)"
+                    style={{transition:"stroke-dashoffset 1s linear"}}/>
+                </svg>
+                <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center",width:"155px"}}>
+                  {isFasting?(
+                    <>
+                      <div style={{fontSize:"9px",color:P.textFaint,letterSpacing:"2.5px",textTransform:"uppercase",marginBottom:"4px"}}>Fasted 💕</div>
+                      <div style={{fontSize:"38px",fontWeight:"bold",color:P.accentSoft,lineHeight:1.05,fontFamily:"'Courier New',monospace",textShadow:`0 0 20px ${P.accentGlow}`}}>{pad(elH)}:{pad(elM)}</div>
+                      <div style={{fontSize:"10px",color:P.textFaint,marginTop:"3px"}}>{rem>0?`${pad(remH)}:${pad(remM)}:${pad(remS)} to go`:"✅ Done!"}</div>
+                      <div style={{fontSize:"12px",color:P.accentSoft,marginTop:"5px",fontWeight:"bold"}}>{Math.round(prog)}%</div>
+                    </>
+                  ):(
+                    <>
+                      <div style={{fontSize:"34px",marginBottom:"4px"}}>✨</div>
+                      <div style={{fontSize:"16px",color:P.accentSoft,fontWeight:"bold"}}>16:8 Fast</div>
+                      <div style={{fontSize:"11px",color:P.textFaint,marginTop:"3px"}}>Ready to begin</div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {fastStart&&(
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px",width:"100%",marginTop:"6px"}}>
+                  {[{label:"Started",val:fmtTime(fastStart)},{label:"Eat at",val:fmtTime(eatStart)},{label:"Close at",val:fmtTime(eatEnd)}].map(x=>(
+                    <div key={x.label} style={{textAlign:"center",background:"rgba(255,48,133,0.07)",borderRadius:"16px",padding:"12px 6px",border:`1px solid rgba(255,80,150,0.12)`,boxShadow:"inset 0 1px 0 rgba(255,200,230,0.06)"}}>
+                      <div style={{fontSize:"9px",color:P.textFaint,textTransform:"uppercase",letterSpacing:"1.5px",marginBottom:"4px"}}>{x.label}</div>
+                      <div style={{fontSize:"15px",color:P.accentSoft,fontFamily:"'Courier New',monospace",fontWeight:"bold"}}>{x.val}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* BUTTONS */}
+            {!isFasting?(
+              <div style={{display:"flex",flexDirection:"column",gap:"10px"}}>
+                <button onClick={startFast} style={{...BT(P.btnPrimary),padding:"19px",fontSize:"16px",letterSpacing:"0.5px"}}>
+                  💖 Begin My Fast Now
+                </button>
+                <button onClick={()=>{setBackMode(!backMode);setSchedMode(false);}} style={{
+                  ...BT(P.btnSched),
+                  border:`1px solid ${P.cardBorder}`,
+                  color:P.accentSoft,
+                  boxShadow:"none",
+                }}>⏪ I Forgot — Start From an Earlier Time</button>
+                {backMode&&(
+                  <div style={C({marginBottom:0})}>
+                    <div style={LB}>What time did your fast actually begin?</div>
+                    <input type="time" value={backTime} onChange={e=>setBackTime(e.target.value)} style={{width:"100%",padding:"13px",borderRadius:"14px",marginBottom:"10px",background:"rgba(216,27,96,0.06)",border:`1px solid ${P.cardBorder}`,color:P.textPrimary,fontSize:"18px",fontFamily:"inherit"}}/>
+                    <div style={{fontSize:"11px",color:P.textFaint,marginBottom:"12px",lineHeight:1.5}}>If the time is later than now, we'll count it from yesterday. 💕</div>
+                    <button onClick={startBack} style={BT(P.btnPrimary)}>✅ Start From {backTime}</button>
+                  </div>
+                )}
+                <button onClick={()=>{setSchedMode(!schedMode);setBackMode(false);}} style={{
+                  ...BT(P.btnSched),
+                  border:`1px solid ${P.cardBorder}`,
+                  color:P.accentSoft,
+                  boxShadow:"none",
+                }}>⏰ Schedule a Future Fast</button>
+                {schedMode&&(
+                  <div style={C({marginBottom:0})}>
+                    <div style={LB}>Start time tonight / tomorrow</div>
+                    <input type="time" value={customTime} onChange={e=>setCustomTime(e.target.value)} style={{width:"100%",padding:"13px",borderRadius:"14px",marginBottom:"12px",background:"rgba(216,27,96,0.06)",border:`1px solid ${P.cardBorder}`,color:P.textPrimary,fontSize:"18px",fontFamily:"inherit"}}/>
+                    <div style={{fontSize:"11px",color:P.textFaint,marginBottom:"12px",lineHeight:1.5}}>🔔 A reminder will pop up the moment your fast begins.</div>
+                    <button onClick={startSched} style={BT(P.btnEnd)}>✅ Confirm Scheduled Fast</button>
+                  </div>
+                )}
+              </div>
+            ):(
+              <button onClick={endFast} style={{...BT(P.btnEnd),padding:"17px",fontSize:"16px",boxShadow:"0 8px 26px rgba(216,27,96,0.4)"}}>⏹ End Fast &amp; Log Progress</button>
+            )}
+
+            {/* INSPIRATION CARD */}
+            <div style={{
+              ...C({marginTop:"24px",textAlign:"center",border:`1px solid rgba(216,27,96,0.22)`,background:"rgba(255,255,255,0.8)"}),
+              opacity:inspoFade?1:0,transition:"opacity 0.4s"
+            }}>
+              <div className="glow-emoji" style={{fontSize:"36px",marginBottom:"12px"}}>{inspo.emoji}</div>
+              <div style={{fontSize:"15px",color:P.gold,lineHeight:1.8,fontStyle:"italic",marginBottom:"16px"}}>"{inspo.quote}"</div>
+              <div style={{background:"rgba(255,48,133,0.09)",borderRadius:"14px",padding:"13px 16px",borderLeft:`3px solid ${P.accentDeep}`}}>
+                <div style={{fontSize:"10px",color:P.textFaint,letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:"5px"}}>✝️ Scripture</div>
+                <div style={{fontSize:"12px",color:P.textSub,lineHeight:1.75}}>{inspo.scripture}</div>
+              </div>
+              <div style={{display:"flex",justifyContent:"center",gap:"8px",marginTop:"16px"}}>
+                <button onClick={()=>{setInspoFade(false);setTimeout(()=>{setInspoIdx(i=>(i-1+inspirations.length)%inspirations.length);setInspoFade(true);},300);}} style={PL(false)}>‹ Prev</button>
+                <button onClick={()=>{setInspoFade(false);setTimeout(()=>{setInspoIdx(i=>(i+1)%inspirations.length);setInspoFade(true);},300);}} style={PL(false)}>Next ›</button>
+              </div>
+              <div style={{display:"flex",justifyContent:"center",gap:"5px",marginTop:"12px"}}>
+                {inspirations.map((_,i)=>(
+                  <div key={i} onClick={()=>{setInspoFade(false);setTimeout(()=>{setInspoIdx(i);setInspoFade(true);},300);}} style={{width:i===inspoIdx?"20px":"6px",height:"6px",borderRadius:"3px",background:i===inspoIdx?P.accent:"rgba(255,80,150,0.22)",transition:"all 0.3s",cursor:"pointer"}}/>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ══════════════════════════════════════════════
+            HYDRATION TAB
+        ══════════════════════════════════════════════ */}
+        {tab==="hydration"&&(
+          <>
+            {/* WATER CARD */}
+            <div style={C({background:"rgba(244,230,251,0.85)",border:`1px solid ${P.waterBorder}`})}>
+              <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"20px"}}>
+                <span style={{fontSize:"28px"}}>💧</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:"17px",color:P.waterAccent,fontWeight:"bold",letterSpacing:"0.3px"}}>Daily Water</div>
+                  <div style={{fontSize:"11px",color:"#6a3d8a",marginTop:"2px"}}>Goal: 2 Litres — 8 glasses of 250ml</div>
+                </div>
+                <div style={{fontSize:"24px",color:P.waterAccent,fontWeight:"bold"}}>{water}/{WATER_GOAL}</div>
+              </div>
+              <div style={{display:"flex",gap:"6px",flexWrap:"wrap",justifyContent:"center",marginBottom:"16px"}}>
+                {Array.from({length:WATER_GOAL}).map((_,i)=>(
+                  <div key={i} onClick={()=>setWater(i<water?i:i+1)} style={{width:"52px",height:"66px",borderRadius:"14px",background:i<water?"linear-gradient(180deg,#ce93d8,#7b1fa2)":"rgba(142,36,170,0.08)",border:i<water?`2px solid ${P.waterAccent}`:"2px solid rgba(142,36,170,0.18)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px",transition:"all 0.2s",transform:i<water?"scale(1.08)":"scale(1)",boxShadow:i<water?"0 4px 12px rgba(150,30,200,0.35)":"none"}}>
+                    {i<water?"💧":<span style={{opacity:0.35,fontSize:"16px",color:"#8e24aa"}}>○</span>}
+                  </div>
+                ))}
+              </div>
+              <div style={{background:"rgba(100,30,150,0.15)",borderRadius:"10px",height:"8px",overflow:"hidden",marginBottom:"16px"}}>
+                <div style={{width:`${(water/WATER_GOAL)*100}%`,height:"100%",background:`linear-gradient(90deg,${P.waterDeep},${P.waterAccent})`,borderRadius:"10px",transition:"width 0.45s"}}/>
+              </div>
+              <div style={{display:"flex",gap:"8px"}}>
+                <button onClick={()=>setWater(Math.min(water+1,WATER_GOAL))} style={{...BT("linear-gradient(135deg,#5e1890,#ab47bc)"),flex:1,padding:"13px",boxShadow:"0 4px 18px rgba(100,20,170,0.4)"}}>+ Glass of Water</button>
+                <button onClick={()=>setWater(Math.max(water-1,0))} style={{padding:"13px 18px",borderRadius:"14px",border:`1px solid ${P.waterBorder}`,background:"transparent",color:P.waterAccent,cursor:"pointer",fontFamily:"inherit",fontSize:"15px"}}>−</button>
+              </div>
+              {water>0&&(()=>{const f=waterFacts[(water-1)%waterFacts.length];return(
+                <div style={{marginTop:"14px",background:"rgba(142,36,170,0.08)",borderRadius:"16px",padding:"14px 16px",border:"1px solid rgba(142,36,170,0.18)",display:"flex",gap:"12px",alignItems:"flex-start",animation:"fadeSnippet 0.4s ease"}}>
+                  <span style={{fontSize:"24px",flexShrink:0}}>{f.icon}</span>
+                  <div>
+                    <div style={{fontSize:"10px",color:"#7b1fa2",letterSpacing:"2px",textTransform:"uppercase",marginBottom:"4px"}}>💡 Did You Know?</div>
+                    <div style={{fontSize:"13px",color:P.textSub,lineHeight:1.75}}>{f.fact}</div>
+                  </div>
+                </div>
+              );})()}
+              {water>=WATER_GOAL&&<div style={{textAlign:"center",marginTop:"14px",color:"#8e24aa",fontSize:"13px",fontWeight:"bold"}}>🎉 2 Litres done! Your cells are celebrating! 💜</div>}
+            </div>
+
+            {/* WATER SCHEDULE */}
+            <div style={C()}>
+              <div style={LB}>💡 Suggested Water Schedule</div>
+              <div style={{fontSize:"11px",color:P.textFaint,marginBottom:"12px",lineHeight:1.5}}>Tap the 🔔 on any time to get a pop-up reminder today.</div>
+              {waterSchedule.map((w,i)=>{const rk="w-"+w.time;const on=reminders.includes(rk);return(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:"10px",padding:"11px 13px",borderRadius:"14px",marginBottom:"6px",background:i<water?"rgba(142,36,170,0.1)":"rgba(142,36,170,0.04)",border:"1px solid rgba(142,36,170,0.12)",transition:"background 0.3s"}}>
+                  <div style={{fontSize:"11px",color:"#6a3d8a",fontFamily:"'Courier New',monospace",minWidth:"36px"}}>{w.time}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:"12px",color:P.waterAccent,fontWeight:"600"}}>{w.label}</div>
+                    <div style={{fontSize:"11px",color:"#6a3d8a",marginTop:"1px"}}>{w.note}</div>
+                  </div>
+                  <button onClick={()=>toggleReminder(rk)} title={on?"Reminder on":"Set reminder"} style={{border:on?`1px solid ${P.waterAccent}`:"1px solid rgba(142,36,170,0.2)",background:on?"rgba(142,36,170,0.16)":"transparent",borderRadius:"10px",padding:"6px 9px",cursor:"pointer",fontFamily:"inherit",fontSize:"14px",lineHeight:1}}>{on?"🔔":"🔕"}</button>
+                  <div style={{fontSize:"15px"}}>{i<water?"✅":"💧"}</div>
+                </div>
+              );})}
+            </div>
+
+            {/* ROOIBOS CARD */}
+            <div style={C({background:"rgba(255,236,244,0.85)",border:`1px solid ${P.rooibosBorder}`})}>
+              <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"20px"}}>
+                <span style={{fontSize:"28px"}}>🫖</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:"17px",color:P.accentSoft,fontWeight:"bold",letterSpacing:"0.3px"}}>Rooibos Tea</div>
+                  <div style={{fontSize:"11px",color:P.textSub,marginTop:"2px"}}>Goal: 5 cups · Black · No sugar · No milk</div>
+                </div>
+                <div style={{fontSize:"24px",color:P.accentSoft,fontWeight:"bold"}}>{rooibos}/{ROOIBOS_GOAL}</div>
+              </div>
+              <div style={{display:"flex",justifyContent:"center",gap:"10px",marginBottom:"16px"}}>
+                {Array.from({length:ROOIBOS_GOAL}).map((_,i)=>(
+                  <div key={i} onClick={()=>setRooibos(i<rooibos?i:i+1)} style={{fontSize:"38px",cursor:"pointer",transition:"all 0.2s",filter:i<rooibos?"none":"grayscale(1) opacity(0.22)",transform:i<rooibos?"scale(1.18)":"scale(1)",filter:i<rooibos?`drop-shadow(0 2px 8px ${P.accentGlow})`:"grayscale(1) opacity(0.22)"}}>🫖</div>
+                ))}
+              </div>
+              <div style={{background:"rgba(180,30,100,0.15)",borderRadius:"10px",height:"8px",overflow:"hidden",marginBottom:"16px"}}>
+                <div style={{width:`${(rooibos/ROOIBOS_GOAL)*100}%`,height:"100%",background:`linear-gradient(90deg,${P.accentDeep},${P.accentSoft})`,borderRadius:"10px",transition:"width 0.45s"}}/>
+              </div>
+              <div style={{display:"flex",gap:"8px"}}>
+                <button onClick={()=>setRooibos(Math.min(rooibos+1,ROOIBOS_GOAL))} style={{...BT(P.btnPrimary),flex:1,padding:"13px"}}>+ Cup of Rooibos</button>
+                <button onClick={()=>setRooibos(Math.max(rooibos-1,0))} style={{padding:"13px 18px",borderRadius:"14px",border:`1px solid ${P.rooibosBorder}`,background:"transparent",color:P.accentSoft,cursor:"pointer",fontFamily:"inherit",fontSize:"15px"}}>−</button>
+              </div>
+              {rooibos>0&&(()=>{const f=rooibosFacts[(rooibos-1)%rooibosFacts.length];return(
+                <div style={{marginTop:"14px",background:"rgba(180,20,80,0.14)",borderRadius:"16px",padding:"14px 16px",border:`1px solid rgba(255,80,150,0.2)`,display:"flex",gap:"12px",alignItems:"flex-start",animation:"fadeSnippet 0.4s ease"}}>
+                  <span style={{fontSize:"24px",flexShrink:0}}>{f.icon}</span>
+                  <div>
+                    <div style={{fontSize:"10px",color:P.textFaint,letterSpacing:"2px",textTransform:"uppercase",marginBottom:"4px"}}>💡 Did You Know?</div>
+                    <div style={{fontSize:"13px",color:P.textSub,lineHeight:1.75}}>{f.fact}</div>
+                  </div>
+                </div>
+              );})()}
+              {rooibos>=ROOIBOS_GOAL&&<div style={{textAlign:"center",marginTop:"14px",color:P.accentSoft,fontSize:"13px",fontWeight:"bold"}}>🌸 5 cups done! You are glowing from the inside out! 🫖</div>}
+            </div>
+
+            {/* ROOIBOS SCHEDULE */}
+            <div style={C()}>
+              <div style={LB}>🫖 Rooibos Schedule</div>
+              <div style={{fontSize:"11px",color:P.textFaint,marginBottom:"12px",lineHeight:1.5}}>Tap the 🔔 on any cup to get a pop-up reminder today.</div>
+              {rooibosSchedule.map((r,i)=>{const rk="r-"+r.time;const on=reminders.includes(rk);return(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:"10px",padding:"11px 13px",borderRadius:"14px",marginBottom:"6px",background:i<rooibos?"rgba(216,27,96,0.1)":"rgba(216,27,96,0.04)",border:"1px solid rgba(216,27,96,0.12)",transition:"background 0.3s"}}>
+                  <div style={{fontSize:"11px",color:P.textFaint,fontFamily:"'Courier New',monospace",minWidth:"36px"}}>{r.time}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:"12px",color:P.accentSoft,fontWeight:"600"}}>{r.label}</div>
+                    <div style={{fontSize:"11px",color:P.textFaint,marginTop:"1px"}}>{r.note}</div>
+                  </div>
+                  <button onClick={()=>toggleReminder(rk)} title={on?"Reminder on":"Set reminder"} style={{border:on?`1px solid ${P.accent}`:"1px solid rgba(216,27,96,0.2)",background:on?"rgba(216,27,96,0.14)":"transparent",borderRadius:"10px",padding:"6px 9px",cursor:"pointer",fontFamily:"inherit",fontSize:"14px",lineHeight:1}}>{on?"🔔":"🔕"}</button>
+                  <div style={{fontSize:"15px"}}>{i<rooibos?"✅":"🫖"}</div>
+                </div>
+              );})}
+              <div style={{marginTop:"14px",background:"rgba(216,27,96,0.06)",borderRadius:"14px",padding:"14px"}}>
+                <div style={{fontSize:"11px",color:P.textFaint,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"6px"}}>Why Rooibos?</div>
+                <div style={{fontSize:"12px",color:P.textSub,lineHeight:1.9}}>🌸 Rich in antioxidants · Caffeine-free · Supports gut health<br/>💕 Anti-inflammatory · Helps curb hunger during fasting<br/>☕ Your gorgeous companion through every fast</div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ══════════════════════════════════════════════
+            RECIPES TAB
+        ══════════════════════════════════════════════ */}
+        {tab==="eat"&&(
+          <>
+            <div style={{...C({background:"rgba(255,255,255,0.8)",border:`1px solid rgba(216,27,96,0.22)`}),textAlign:"center"}}>
+              <div style={{fontSize:"20px",color:P.accentSoft,fontWeight:"bold",letterSpacing:"0.5px"}}>🌸 Daniel Fast Eating Plan</div>
+              <div style={{fontSize:"12px",color:P.textSub,marginTop:"8px",lineHeight:1.7}}>Whole foods · Plant-based · No meat · No dairy · No processed sugar · No leavened bread</div>
+              {eatStart&&<div style={{marginTop:"10px",fontSize:"12px",color:P.textFaint}}>🍽 Eating window: <strong style={{color:P.accentSoft}}>{fmtTime(eatStart)}</strong> → <strong style={{color:P.accentSoft}}>{fmtTime(eatEnd)}</strong></div>}
+            </div>
+            <div style={{display:"flex",gap:"8px",marginBottom:"16px",overflowX:"auto",paddingBottom:"4px"}}>
+              {cats.map(c=><button key={c} onClick={()=>setRecipeFilter(c)} style={PL(recipeFilter===c)}>{c}</button>)}
+            </div>
+            {filtered.map((r,i)=>(
+              <div key={i} style={{...C({cursor:"pointer",border:expandedRecipe===i?`1px solid ${P.accent}`:`1px solid ${P.cardBorder}`,background:expandedRecipe===i?"rgba(255,228,239,0.92)":P.cardBg,transition:"all 0.25s",boxShadow:expandedRecipe===i?`0 6px 24px rgba(216,27,96,0.18), inset 0 1px 0 rgba(255,255,255,0.6)`:`0 6px 20px rgba(216,27,96,0.1), inset 0 1px 0 rgba(255,255,255,0.6)`})}} onClick={()=>setExpandedRecipe(expandedRecipe===i?null:i)}>
+                <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+                  <span style={{fontSize:"32px"}}>{r.emoji}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:"15px",color:P.gold,fontWeight:"bold"}}>{r.name}</div>
+                    <div style={{fontSize:"11px",color:P.textFaint,marginTop:"2px"}}>{r.tag}</div>
+                  </div>
+                  <div style={{fontSize:"15px",color:P.accent,transition:"transform 0.2s",transform:expandedRecipe===i?"rotate(90deg)":"rotate(0deg)"}}>›</div>
+                </div>
+                {expandedRecipe===i&&(
+                  <div style={{marginTop:"18px",paddingTop:"16px",borderTop:`1px solid rgba(255,80,150,0.15)`}}>
+                    <div style={LB}>🛒 Ingredients</div>
+                    <ul style={{margin:"0 0 16px 0",paddingLeft:"20px"}}>{r.ingredients.map((ing,j)=><li key={j} style={{fontSize:"13px",color:P.textSub,marginBottom:"5px",lineHeight:1.5}}>{ing}</li>)}</ul>
+                    <div style={LB}>👩‍🍳 Method</div>
+                    {r.steps.map((step,j)=>(
+                      <div key={j} style={{display:"flex",gap:"10px",marginBottom:"9px",alignItems:"flex-start"}}>
+                        <div style={{minWidth:"22px",height:"22px",borderRadius:"50%",background:"rgba(255,48,133,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"11px",color:P.accent,marginTop:"1px",fontWeight:"bold",flexShrink:0}}>{j+1}</div>
+                        <div style={{fontSize:"13px",color:P.textSub,lineHeight:1.65}}>{step}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            <div style={C({border:"1px solid rgba(180,100,220,0.2)"})}>
+              <div style={{fontSize:"14px",color:P.waterAccent,fontWeight:"bold",marginBottom:"14px",letterSpacing:"0.3px"}}>📖 Daniel Fast Rules</div>
+              <div style={{fontSize:"12px",color:P.textSub,lineHeight:2.1}}>
+                ✅ <span style={{color:P.accentSoft}}>Eat freely:</span> Fruits, veggies, legumes, whole grains, nuts, seeds, olive oil, herbs, water, rooibos<br/>
+                ❌ <span style={{color:"#c2185b"}}>Avoid:</span> Meat, fish, dairy, eggs, sugar, honey, leavened bread, alcohol, coffee, processed food<br/>
+                🙏 <span style={{color:P.gold}}>Purpose:</span> Align body and spirit — fast with intention and gratitude<br/>
+                📖 <span style={{color:P.waterAccent}}>Reference:</span> Daniel 1:12 · Daniel 10:3
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ══════════════════════════════════════════════
+            BIBLE TAB
+        ══════════════════════════════════════════════ */}
+        {tab==="bible"&&(
+          <>
+            <div style={{...C({background:"rgba(255,255,255,0.8)",border:`1px solid rgba(216,27,96,0.22)`}),textAlign:"center"}}>
+              <div style={{fontSize:"11px",color:P.textFaint,letterSpacing:"2.5px",textTransform:"uppercase",marginBottom:"5px"}}>📖 Fast Like Daniel</div>
+              <div style={{fontSize:"19px",color:P.accentSoft,fontWeight:"bold",letterSpacing:"0.5px"}}>21-Day Bible Reading Plan</div>
+              <div style={{fontSize:"12px",color:P.textSub,marginTop:"6px"}}>by Scott Williams · YouVersion Plan #10826</div>
+              <div style={{margin:"16px 0 6px",background:"rgba(255,48,133,0.1)",borderRadius:"10px",height:"8px",overflow:"hidden"}}>
+                <div style={{width:`${(doneDays.length/21)*100}%`,height:"100%",background:`linear-gradient(90deg,${P.accentDeep},${P.accentSoft})`,borderRadius:"10px",transition:"width 0.5s"}}/>
+              </div>
+              <div style={{fontSize:"11px",color:P.textFaint}}>{doneDays.length} of 21 days completed 💖</div>
+            </div>
+
+            <div style={{overflowX:"auto",paddingBottom:"8px",marginBottom:"16px"}}>
+              <div style={{display:"flex",gap:"7px",minWidth:"max-content"}}>
+                {bibleReadingPlan.map(d=>{const done=doneDays.includes(d.day),active=bibleDay===d.day;return(
+                  <button key={d.day} onClick={()=>goDay(d.day)} style={{minWidth:"38px",height:"38px",borderRadius:"50%",border:"none",background:active?`linear-gradient(135deg,${P.accentDeep},${P.accent})`:done?"rgba(216,27,96,0.16)":"rgba(216,27,96,0.06)",color:active?"#fff":done?P.accentSoft:P.textFaint,fontWeight:active?"bold":"normal",fontSize:"12px",cursor:"pointer",fontFamily:"inherit",boxShadow:active?`0 4px 18px ${P.accentGlow}`:"none",transition:"all 0.2s"}}>
+                    {done&&!active?"✓":d.day}
+                  </button>
+                );})}
+              </div>
+            </div>
+
+            <div style={C({background:"rgba(255,255,255,0.85)",border:`1px solid ${P.accent}`,boxShadow:`0 6px 24px rgba(216,27,96,0.18), inset 0 1px 0 rgba(255,255,255,0.6)`})}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"14px"}}>
+                <div>
+                  <div style={{fontSize:"10px",color:P.textFaint,letterSpacing:"2px",textTransform:"uppercase",marginBottom:"5px"}}>Day {todayBible.day} of 21 · {todayBible.section}</div>
+                  <div style={{fontSize:"19px",color:P.gold,fontWeight:"bold"}}>{todayBible.title}</div>
+                </div>
+                {isBibleDone&&<div style={{fontSize:"24px"}}>✅</div>}
+              </div>
+              <a href={todayBible.url} target="_blank" rel="noopener noreferrer" style={{display:"flex",alignItems:"center",gap:"10px",padding:"13px 15px",background:"rgba(255,48,133,0.1)",borderRadius:"14px",marginBottom:"18px",border:`1px solid rgba(255,80,150,0.22)`,textDecoration:"none",boxShadow:"inset 0 1px 0 rgba(255,200,230,0.05)"}}>
+                <span style={{fontSize:"20px"}}>📖</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:"13px",color:P.accentSoft,fontWeight:"bold"}}>{todayBible.ref}</div>
+                  <div style={{fontSize:"11px",color:P.textFaint,marginTop:"2px"}}>Tap to read on Bible.com →</div>
+                </div>
+                <span style={{fontSize:"17px",color:P.accent}}>›</span>
+              </a>
+              <div style={{fontSize:"14px",color:P.textSub,lineHeight:1.9,marginBottom:"20px"}}>{todayBible.devotion}</div>
+              <div style={{background:"rgba(255,48,133,0.08)",borderRadius:"14px",padding:"15px",borderLeft:`3px solid ${P.accentDeep}`,marginBottom:"20px"}}>
+                <div style={{fontSize:"10px",color:P.textFaint,letterSpacing:"2px",textTransform:"uppercase",marginBottom:"7px"}}>✍️ Reflect</div>
+                <div style={{fontSize:"13px",color:P.textSub,lineHeight:1.75,fontStyle:"italic"}}>{reflections[todayBible.day%5]}</div>
+              </div>
+              <div style={{display:"flex",gap:"10px"}}>
+                {!isBibleDone?(
+                  <button onClick={markDone} style={{...BT(P.btnPrimary),flex:1,padding:"15px"}}>✅ Mark Day {todayBible.day} Complete{bibleDay<21?" → Day "+(todayBible.day+1):""}</button>
+                ):(
+                  <button onClick={()=>{if(bibleDay<21)goDay(bibleDay+1);}} style={{...BT("rgba(255,48,133,0.1)"),flex:1,padding:"15px",color:P.accentSoft,border:`1px solid rgba(255,80,150,0.22)`,boxShadow:"none"}}>{bibleDay<21?"➡️ Go to Day "+(bibleDay+1):"🎉 Plan Complete!"}</button>
+                )}
+                {bibleDay>1&&<button onClick={()=>goDay(bibleDay-1)} style={{padding:"15px 17px",borderRadius:"16px",border:`1px solid rgba(255,80,150,0.22)`,background:"transparent",color:P.textFaint,cursor:"pointer",fontFamily:"inherit",fontSize:"15px"}}>←</button>}
+              </div>
+            </div>
+
+            <div style={C()}>
+              <div style={{fontSize:"13px",color:P.accentSoft,fontWeight:"bold",marginBottom:"14px",letterSpacing:"0.3px"}}>📋 Plan Overview</div>
+              {[{section:"I: Humble",days:"Days 1–7",desc:"Begin with humility. Understand the heart of the Daniel Fast.",icon:"🙏"},{section:"II: Pray",days:"Days 8–14",desc:"Build a lifestyle of prayer. Intercede as Daniel did.",icon:"💬"},{section:"III: Believe",days:"Days 15–21",desc:"Stand in faith. Believe for your breakthrough. Finish strong.",icon:"💪"}].map(s=>(
+                <div key={s.section} style={{display:"flex",gap:"12px",padding:"13px",borderRadius:"14px",marginBottom:"8px",background:todayBible.section===s.section?"rgba(216,27,96,0.1)":"rgba(216,27,96,0.04)",border:todayBible.section===s.section?`1px solid rgba(216,27,96,0.28)`:"1px solid transparent",transition:"all 0.2s"}}>
+                  <span style={{fontSize:"22px"}}>{s.icon}</span>
+                  <div>
+                    <div style={{fontSize:"13px",color:todayBible.section===s.section?P.accentSoft:P.textSub,fontWeight:"bold"}}>{s.section} — {s.days}</div>
+                    <div style={{fontSize:"11px",color:P.textFaint,marginTop:"3px",lineHeight:1.5}}>{s.desc}</div>
+                  </div>
+                </div>
+              ))}
+              <div style={{marginTop:"12px",padding:"13px",background:"rgba(255,48,133,0.07)",borderRadius:"14px"}}>
+                <div style={{fontSize:"11px",color:P.textFaint,letterSpacing:"1px",textTransform:"uppercase",marginBottom:"5px"}}>📚 Full Plan on YouVersion</div>
+                <a href="https://www.bible.com/reading-plans/10826-fast-like-daniel" target="_blank" rel="noopener noreferrer" style={{fontSize:"12px",color:P.accentSoft,textDecoration:"none"}}>Open on Bible.com →</a>
+              </div>
+            </div>
+            {doneDays.length>0&&<button onClick={()=>{if(window.confirm("Reset Bible reading progress?")){setDoneDays([]);setBibleDay(1);lss("ff_completeddays","[]");lss("ff_bibleday","1");}}} style={{...BT("rgba(180,20,80,0.14)"),color:"#c2185b",border:"1px solid rgba(180,20,80,0.28)",boxShadow:"none",marginTop:"4px"}}>🔄 Reset Reading Progress</button>}
+          </>
+        )}
+
+        {/* ══════════════════════════════════════════════
+            HISTORY TAB
+        ══════════════════════════════════════════════ */}
+        {tab==="history"&&(
+          <>
+            <div style={C()}>
+              <div style={{fontSize:"16px",color:P.accentSoft,fontWeight:"bold",marginBottom:"5px",letterSpacing:"0.3px"}}>📊 Your Fast History</div>
+              <div style={{fontSize:"12px",color:P.textSub}}>Last 30 days of fasting logged below 💖</div>
+            </div>
+            {history.length===0?(
+              <div style={{...C(),textAlign:"center",padding:"40px 20px"}}>
+                <div style={{fontSize:"44px",marginBottom:"14px"}}>📋</div>
+                <div style={{fontSize:"14px",color:P.textSub,fontWeight:"bold"}}>No fasts logged yet, gorgeous.</div>
+                <div style={{fontSize:"12px",color:P.textFaint,marginTop:"8px",lineHeight:1.6}}>Start your first fast on the Timer tab! 💖</div>
+              </div>
+            ):(
+              <>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px",marginBottom:"16px"}}>
+                  {[{label:"Total Fasts",val:history.length},{label:"Completed",val:history.filter(h=>h.completed).length},{label:"Avg Hours",val:(history.reduce((a,h)=>a+parseFloat(h.hoursCompleted||0),0)/history.length).toFixed(1)}].map(s=>(
+                    <div key={s.label} style={{...C({margin:0}),textAlign:"center"}}>
+                      <div style={{fontSize:"24px",color:P.accentSoft,fontWeight:"bold"}}>{s.val}</div>
+                      <div style={{fontSize:"10px",color:P.textSub,marginTop:"3px",letterSpacing:"0.5px"}}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{...C({background:"linear-gradient(135deg,rgba(255,236,244,0.9),rgba(255,224,238,0.85))",border:`1px solid rgba(216,27,96,0.22)`,marginBottom:"16px",boxShadow:`0 6px 22px rgba(216,27,96,0.16), inset 0 1px 0 rgba(255,255,255,0.6)`}),textAlign:"center"}}>
+                  <div style={{fontSize:"30px",marginBottom:"6px"}}>🔥</div>
+                  <div style={{fontSize:"24px",color:P.gold,fontWeight:"bold"}}>{history.filter(h=>h.completed).length} Completed Fasts</div>
+                  <div style={{fontSize:"12px",color:P.textSub,marginTop:"6px"}}>Keep the streak alive — you are unstoppable! 💖</div>
+                </div>
+                {history.map((h,i)=>(
+                  <div key={i} style={C({border:h.completed?`1px solid rgba(255,80,150,0.32)`:`1px solid ${P.cardBorder}`})}>
+                    <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+                      <div style={{fontSize:"26px"}}>{h.completed?"✅":"⏸"}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:"14px",color:P.accentSoft,fontWeight:"bold"}}>{h.date}</div>
+                        <div style={{fontSize:"11px",color:P.textFaint,marginTop:"2px"}}>{h.startedAt} → {h.endedAt} · {h.hoursCompleted}h fasted</div>
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontSize:"11px",color:P.waterAccent}}>💧 {h.water}/{WATER_GOAL}</div>
+                        <div style={{fontSize:"11px",color:P.textSub,marginTop:"2px"}}>🫖 {h.rooibos}/{ROOIBOS_GOAL}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <button onClick={()=>{if(window.confirm("Clear all history?")){setHistory([]);try{localStorage.removeItem("ff_history");}catch{}}}} style={{...BT("rgba(180,20,80,0.18)"),color:"#c2185b",border:"1px solid rgba(180,20,80,0.32)",boxShadow:"none",marginTop:"8px"}}>🗑 Clear History</button>
+              </>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* FOOTER */}
+      <div style={{textAlign:"center",padding:"20px",color:P.textFaint,fontSize:"11px",letterSpacing:"1.5px",opacity:0.7}}>
+        Daniel Fast 💖 Made with grace for your wellness journey ✨
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
